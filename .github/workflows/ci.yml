@@ -1,42 +1,49 @@
-name: CI Pipeline
+name: CI Pipeline Completo
 
 on:
   push:
+    branches: [main]
+  pull request:
     branches: [main]
 
   workflow_dispatch:
 
 env:
   NODE_VERSION: "20"
-  APP_NAME: cron-ticker
 
 jobs:
-  build:
+  lint:
+    name: lint
     runs-on: ubuntu-latest
-
-    env:
-      BUILD_DIR: dist
-
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+      - run: npm ci
+      - run: npm run lint
 
-      - name: Show variables
-        run: |
-          echo "App: ${{ env.APP_NAME }}, Node: ${{ env.NODE_VERSION }}"
+  test:
+    name: Tests
+    runs-on: ubuntu-latest
+    needs: lint
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+      - run: npm ci
+      - name: Run tests with coverage
+        run: npm run test:coverage
 
-      - name: Show GitHub Variables
-        run: |
-          echo "App Version: ${{ vars.APP_VERSION }}"
-
-      - name: Show Node Version
-        run: |
-          echo "Node Version: ${{ vars.NODE_VERSION }}"
-
-      - name: Deploy API
-        run: |
-          echo "Deploying with key ${{ secrets.API_KEY }}"
-
-      - name: Build
-        run: npm run build
-        env:
-          APP_VERSION: "2.0.0"
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    needs: test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+      - run: npm ci
+      - run: npm run build
